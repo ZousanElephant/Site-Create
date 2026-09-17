@@ -4,7 +4,7 @@ const fishData = [
     name: "ネオンテトラ", latin: "Paracheirodon innesi",
     lat: -3.135, lng: -60.025, height: 180000,
     habitat: "アマゾン川水系・ネグロ川", temp: "24–28℃", ph: "4.0–7.0", hardness: "軟水",
-    image: "https://upload.wikimedia.org/wikipedia/commons/7/7e/Paracheirodon_innesi.jpg",
+    image: "images/neon_tetra.jpg",
     desc: "アマゾン川流域のブラックウォーターに生息する小型カラシン。青と赤のネオンラインが美しい定番種。"
   },
   {
