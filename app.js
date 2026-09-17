@@ -123,28 +123,39 @@ setStatus("起動完了。地球をドラッグして回転できます。");
 
 let flying = false;
 
-// カメラ移動（地球の横回転を起こさず、ピン真上へ垂直ズーム）
+// カメラ移動（現在高度に応じて降下速度・時間を自動調整）
 function flyToFish(f) {
   flying = true;
   document.getElementById("info").style.display = "none";
 
-  // 現在のカメラの向き（Heading）を維持して横回転を防止
-  const currentHeading = viewer.camera.heading;
+  // 現在のカメラの地表高度（メートル）を取得
+  const currentHeight = viewer.camera.positionCartographic.height;
 
-  // ピンの真上（高度f.height）の座標を計算
+  // 現在高度に応じて降下時間（秒）を可変に設定
+  // ・宇宙視点（1,000万m以上）: 3.8秒（壮大にゆったり降下）
+  // ・中層（100万m〜1,000万m）: 2.6秒
+  // ・近距離（100万m以下）: 1.2秒（素早く移動）
+  let flyDuration = 2.6;
+  if (currentHeight > 10000000) {
+    flyDuration = 3.8;
+  } else if (currentHeight < 1000000) {
+    flyDuration = 1.2;
+  }
+
+  const currentHeading = viewer.camera.heading;
   const destination = Cesium.Cartesian3.fromDegrees(f.lng, f.lat, f.height);
 
   viewer.camera.flyTo({
     destination: destination,
     orientation: {
       heading: currentHeading,
-      pitch: Cesium.Math.toRadians(-89.9), // 真上から垂直に見下ろす
+      pitch: Cesium.Math.toRadians(-89.9),
       roll: 0
     },
-    duration: 2.8,
+    duration: flyDuration,
     complete: () => {
       flying = false;
-      setTimeout(() => showFish(f), 400);
+      setTimeout(() => showFish(f), 300);
     }
   });
 }
