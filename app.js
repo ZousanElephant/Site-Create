@@ -24,41 +24,40 @@ try {
   setStatus("Cesium読み込み完了。地球を初期化中…");
 
   viewer = new Cesium.Viewer("cesiumContainer", {
-  animation: false,
-  timeline: false,
-  baseLayerPicker: false,
-  geocoder: false,
-  homeButton: false,
-  sceneModePicker: false,
-  navigationHelpButton: false,
-  fullscreenButton: false,
-  infoBox: false,
-  selectionIndicator: false,
-  terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-  baseLayer: false,
-  skyBox: true,          // ← falseからtrueへ（宇宙の星空を表示）
-  skyAtmosphere: true    // ← falseからtrueへ（地球を包む青い大気光を表示）
-});
+    animation: false,
+    timeline: false,
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: false,
+    baseLayer: false,
+    skyBox: true,
+    skyAtmosphere: true
+  });
 
-  setStatus("地球の初期化OK。地図タイルを読み込み中…");
+  setStatus("地球の初期化OK。衛星写真を読み込み中…");
 
-  // Esriの高精細な衛星写真タイルに差し替え（APIキー不要）
-const earthImagery = new Cesium.UrlTemplateImageryProvider({
-  url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  maximumLevel: 19,
-  credit: "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-});
-viewer.imageryLayers.add(new Cesium.ImageryLayer(earthImagery));
+  // 高精細な衛星写真（航空写真）タイルを設定
+  const satelliteImagery = new Cesium.UrlTemplateImageryProvider({
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    maximumLevel: 19
+  });
+  viewer.imageryLayers.add(new Cesium.ImageryLayer(satelliteImagery));
 
-  setStatus("地図タイルOK。魚のピンを配置中…");
+  setStatus("衛星写真OK。魚のピンを配置中…");
 } catch (e) {
   console.error(e);
   setStatus("初期化エラー: " + (e && e.message ? e.message : e), true);
   throw e;
 }
 
+// クラッシュの原因となっていた enableLighting を無効化し、大気と背景のみ有効化
 viewer.scene.globe.show = true;
-viewer.scene.globe.enableLighting = true;
+viewer.scene.globe.enableLighting = false; 
 viewer.scene.globe.showGroundAtmosphere = true;
 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
@@ -126,18 +125,14 @@ setStatus("起動完了。地球をドラッグして回転できます。");
 
 let flying = false;
 
-// カメラ移動（現在高度に応じて降下速度・時間を自動調整）
+// カメラ移動（高度に応じた可変スピードで真上から急降下）
 function flyToFish(f) {
   flying = true;
   document.getElementById("info").style.display = "none";
 
-  // 現在のカメラの地表高度（メートル）を取得
   const currentHeight = viewer.camera.positionCartographic.height;
 
-  // 現在高度に応じて降下時間（秒）を可変に設定
-  // ・宇宙視点（1,000万m以上）: 3.8秒（壮大にゆったり降下）
-  // ・中層（100万m〜1,000万m）: 2.6秒
-  // ・近距離（100万m以下）: 1.2秒（素早く移動）
+  // 高度に応じた秒数の算出
   let flyDuration = 2.6;
   if (currentHeight > 10000000) {
     flyDuration = 3.8;
