@@ -123,24 +123,28 @@ setStatus("起動完了。地球をドラッグして回転できます。");
 
 let flying = false;
 
-// カメラ移動（まっすぐ真上からズーム）
+// カメラ移動（地球の横回転を起こさず、ピン真上へ垂直ズーム）
 function flyToFish(f) {
   flying = true;
   document.getElementById("info").style.display = "none";
 
+  // 現在のカメラの向き（Heading）を維持して横回転を防止
+  const currentHeading = viewer.camera.heading;
+
+  // ピンの真上（高度f.height）の座標を計算
   const destination = Cesium.Cartesian3.fromDegrees(f.lng, f.lat, f.height);
 
   viewer.camera.flyTo({
-    destination,
+    destination: destination,
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90), // まっすぐ真下へ降下
+      heading: currentHeading,
+      pitch: Cesium.Math.toRadians(-89.9), // 真上から垂直に見下ろす
       roll: 0
     },
-    duration: 3.5,
+    duration: 2.8,
     complete: () => {
       flying = false;
-      setTimeout(() => showFish(f), 500);
+      setTimeout(() => showFish(f), 400);
     }
   });
 }
