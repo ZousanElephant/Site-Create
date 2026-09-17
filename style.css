@@ -1,51 +1,10 @@
-* {
-  box-sizing: border-box;
-}
-
-html, body, #cesiumContainer {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-}
-
-body {
-  background: #000;
-  font-family: "Segoe UI", "Noto Sans JP", sans-serif;
-  color: #fff;
-}
-
-/* ヘッダーHUD */
-#hud {
-  position: fixed;
-  z-index: 20;
-  left: 24px;
-  top: 22px;
-  padding: 14px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
-  background: rgba(5, 10, 18, 0.62);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-}
-#hud .title {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-#hud .sub {
-  font-size: 12px;
-  color: #b9c9d8;
-  margin-top: 5px;
-}
-
-/* 生息地選択リスト */
+/* 生息地選択リスト（スクロール対応） */
 #fishList {
   position: fixed;
   z-index: 20;
   right: 22px;
   top: 22px;
+  bottom: 22px; /* 画面下端まで伸ばす */
   width: 250px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -53,181 +12,30 @@ body {
   background: rgba(5, 10, 18, 0.66);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 35px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
 }
+
 #fishList h3 {
   margin: 4px 8px 10px;
   font-size: 13px;
   color: #b9c9d8;
   font-weight: 500;
-}
-.fishBtn {
-  width: 100%;
-  padding: 12px 14px;
-  margin: 5px 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-  transition: 0.2s;
-}
-.fishBtn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateX(-2px);
+  flex-shrink: 0;
 }
 
-/* ピン用スタイル */
-.pin {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: #16c8ff;
-  box-shadow: 0 0 8px #16c8ff, 0 0 22px #16c8ff, 0 0 45px rgba(22, 200, 255, 0.7);
-  position: relative;
-  cursor: pointer;
-}
-.pin:after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: #fff;
-}
-.pinLabel {
-  margin-top: 8px;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 700;
-  text-shadow: 0 2px 5px #000, 0 0 8px #000;
+/* ボタンリスト部分をスクロール可能に */
+#buttons {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-right: 4px;
 }
 
-/* 詳細モーダルカード */
-#info {
-  position: fixed;
-  z-index: 30;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.58);
-  backdrop-filter: blur(7px);
+/* スクロールバーの見た目をすっきり細く */
+#buttons::-webkit-scrollbar {
+  width: 5px;
 }
-#card {
-  width: min(1100px, 92vw);
-  max-height: 88vh;
-  overflow: auto;
-  display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 28px;
-  padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
-  background: linear-gradient(145deg, rgba(9, 18, 28, 0.97), rgba(2, 8, 15, 0.94));
-  box-shadow: 0 25px 90px rgba(0, 0, 0, 0.7);
-}
-#fishImage {
-  width: 100%;
-  height: 430px;
-  object-fit: cover;
-  border-radius: 14px;
-  background: #06111a;
-}
-#card h1 {
-  font-size: 36px;
-  margin: 8px 0 4px;
-}
-#latin {
-  color: #8fa8ba;
-  font-style: italic;
-  margin-bottom: 22px;
-}
-.stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 18px 0;
-}
-.stat {
-  padding: 12px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06);
-}
-.stat small {
-  display: block;
-  color: #8fa8ba;
-  font-size: 11px;
-  margin-bottom: 4px;
-}
-.stat b {
-  font-size: 15px;
-}
-#desc {
-  line-height: 1.8;
-  color: #d8e2ea;
-}
-#close {
-  position: absolute;
-  right: 28px;
-  top: 22px;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-/* ステータスインジケーター */
-#status {
-  position: fixed;
-  left: 18px;
-  bottom: 18px;
-  z-index: 99999;
-  padding: 10px 14px;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  background: rgba(3, 8, 15, 0.9);
-  color: #b8c7d9;
-  font: 13px/1.4 sans-serif;
-  max-width: 70vw;
-  pointer-events: none;
-}
-
-/* レスポンシブ対応 */
-@media (max-width: 800px) {
-  #fishList {
-    left: 15px;
-    right: 15px;
-    top: auto;
-    bottom: 15px;
-    width: auto;
-    display: flex;
-    gap: 5px;
-    overflow: auto;
-  }
-  #fishList h3 {
-    display: none;
-  }
-  .fishBtn {
-    min-width: 150px;
-  }
-  #card {
-    grid-template-columns: 1fr;
-    padding: 18px;
-  }
-  #fishImage {
-    height: 260px;
-  }
-  #card h1 {
-    font-size: 28px;
-  }
+#buttons::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
