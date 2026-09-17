@@ -23,6 +23,7 @@ let viewer;
 try {
   setStatus("Cesium読み込み完了。地球を初期化中…");
 
+  // skyBox: true の指定を外し、デフォルトの宇宙背景を安全に有効化
   viewer = new Cesium.Viewer("cesiumContainer", {
     animation: false,
     timeline: false,
@@ -34,9 +35,7 @@ try {
     fullscreenButton: false,
     infoBox: false,
     selectionIndicator: false,
-    baseLayer: false,
-    skyBox: true,
-    skyAtmosphere: false
+    baseLayer: false
   });
 
   setStatus("地球の初期化OK。衛星写真を読み込み中…");
@@ -55,7 +54,7 @@ try {
   throw e;
 }
 
-// レンダリングエラーを防ぐため照明・地表大気を無効化
+// 描画エラーを防ぐための安全なレンダリング設定
 viewer.scene.globe.show = true;
 viewer.scene.globe.enableLighting = false;
 viewer.scene.globe.showGroundAtmosphere = false;
@@ -125,7 +124,7 @@ setStatus("起動完了。地球をドラッグして回転できます。");
 
 let flying = false;
 
-// カメラ移動（高度に応じた可変スピードで真上から急降下）
+// カメラ移動（高度に応じた速度で真上から急降下）
 function flyToFish(f) {
   flying = true;
   document.getElementById("info").style.display = "none";
