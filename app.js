@@ -39,14 +39,14 @@ try {
 
   setStatus("地球の初期化OK。衛星写真と日本語地名を読み込み中…");
 
-  // 1. 高精細な衛星写真タイル（下地）
+  // 1. 高精細衛星写真
   const satelliteImagery = new Cesium.UrlTemplateImageryProvider({
     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     maximumLevel: 19
   });
   viewer.imageryLayers.add(new Cesium.ImageryLayer(satelliteImagery));
 
-  // 2. 日本語対応の国名・地名ラベル（透明レイヤーで上に重ねる）
+  // 2. 日本語対応地名・国名ラベル
   const labelImagery = new Cesium.UrlTemplateImageryProvider({
     url: "https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
     maximumLevel: 19,
@@ -61,16 +61,14 @@ try {
   throw e;
 }
 
-// 描画設定（地球の裏側にあるピンを遮蔽する）
+// 描画設定（地球の裏側のピンを隠す）
 viewer.scene.globe.show = true;
 viewer.scene.globe.enableLighting = false;
 viewer.scene.globe.showGroundAtmosphere = false;
 viewer.scene.globe.depthTestAgainstTerrain = true;
 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
-const pinEntities = [];
-
-// ピン生成用のCanvas画像作成
+// ピン用Canvas画像
 function makePinCanvas() {
   const c = document.createElement("canvas");
   c.width = 64;
@@ -90,9 +88,9 @@ function makePinCanvas() {
   return c.toDataURL();
 }
 
-// 魚の生息地にピンを配置
-function makePin(f) {
-  const entity = viewer.entities.add({
+// 50種のピンを配置
+fishData.forEach((f) => {
+  viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(f.lng, f.lat, 50000),
     name: f.name,
     billboard: {
@@ -111,40 +109,44 @@ function makePin(f) {
       pixelOffset: new Cesium.Cartesian2(0, 25)
     }
   });
+});
 
-  // Entityにfishプロパティを確実にバインド
-  entity.fish = f;
-  pinEntities.push(entity);
-}
-
-// ボタン一覧の生成
-fishData.forEach(makePin);
-
+// リストボタン作成
 const buttons = document.getElementById("buttons");
 fishData.forEach((f) => {
   const b = document.createElement("button");
   b.className = "fishBtn";
   b.textContent = "📍 " + f.name;
-  b.onclick = () => flyToFish(f);
+  b.onclick = () => selectFish(f);
   buttons.appendChild(b);
 });
 setStatus("起動完了。地球をドラッグして回転できます。");
 
-let currentFlyTarget = null;
+let cardTimer = null;
 
-// カメラ移動（高度に応じた速度で真上から急降下）
-function flyToFish(f) {
+// 魚選択時の処理（ズーム完了後に詳細カード表示）
+function selectFish(f) {
   if (!f) return;
-  currentFlyTarget = f;
 
-  // モーダルを閉じる
+  if (cardTimer) clearTimeout(cardTimer);
   document.getElementById("info").style.display = "none";
 
-  const currentHeight = viewer.camera.positionCartographic.height;
+  document.getElementById("fishName").textContent = f.name;
+  document.getElementById("latin").textContent = f.latin;
+  document.getElementById("habitat").textContent = f.habitat;
+  document.getElementById("temp").textContent = f.temp;
+  document.getElementById("ph").textContent = f.ph;
+  document.getElementById("hardness").textContent = f.hardness;
+  document.getElementById("desc").textContent = f.desc;
 
-  let flyDuration = 2.4;
+  const imgEl = document.getElementById("fishImage");
+  imgEl.src = f.image;
+  imgEl.alt = f.name;
+
+  const currentHeight = viewer.camera.positionCartographic.height;
+  let flyDuration = 2.2;
   if (currentHeight > 10000000) {
-    flyDuration = 3.5;
+    flyDuration = 3.2;
   } else if (currentHeight < 1000000) {
     flyDuration = 1.0;
   }
@@ -159,69 +161,42 @@ function flyToFish(f) {
       pitch: Cesium.Math.toRadians(-89.9),
       roll: 0
     },
-    duration: flyDuration,
-    complete: () => {
-      // 飛行完了時にカードを表示
-      if (currentFlyTarget === f) {
-        showFish(f);
-      }
-    },
-    cancel: () => {
-      // ユーザーが途中で画面を操作・キャンセルした場合は表示しない
-    }
+    duration: flyDuration
   });
+
+  // ズーム着地直後にカードを開く
+  cardTimer = setTimeout(() => {
+    document.getElementById("info").style.display = "flex";
+  }, (flyDuration * 1000) + 200);
 }
 
-// モーダル表示
-function showFish(f) {
-  if (!f) return;
-  document.getElementById("fishName").textContent = f.name || "";
-  document.getElementById("latin").textContent = f.latin || "";
-  document.getElementById("habitat").textContent = f.habitat || "";
-  document.getElementById("temp").textContent = f.temp || "";
-  document.getElementById("ph").textContent = f.ph || "";
-  document.getElementById("hardness").textContent = f.hardness || "";
-  document.getElementById("desc").textContent = f.desc || "";
-  
-  const imgEl = document.getElementById("fishImage");
-  imgEl.src = f.image || "";
-  imgEl.alt = f.name || "";
-
-  document.getElementById("info").style.display = "flex";
-}
-
-// クリックイベントの判定強化（Entityや名前から確実にデータを照合）
+// クリックイベント判定
 viewer.screenSpaceEventHandler.setInputAction(function (click) {
   const picked = viewer.scene.pick(click.position);
-  
-  if (Cesium.defined(picked)) {
-    let targetFish = null;
+  viewer.selectedEntity = undefined;
 
-    // 1. picked.id に直接 fish が入っている場合
-    if (picked.id && picked.id.fish) {
-      targetFish = picked.id.fish;
-    } 
-    // 2. Entityの名前（name）から fishData を検索して照合
-    else if (picked.id && picked.id.name) {
-      targetFish = fishData.find((f) => f.name === picked.id.name);
-    }
-
+  if (Cesium.defined(picked) && picked.id && picked.id.name) {
+    const targetFish = fishData.find((f) => f.name === picked.id.name);
     if (targetFish) {
-      flyToFish(targetFish);
+      selectFish(targetFish);
     }
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// モーダルを閉じる処理
+// モーダル閉じる
 document.getElementById("close").onclick = () => {
+  if (cardTimer) clearTimeout(cardTimer);
   document.getElementById("info").style.display = "none";
 };
 
 document.getElementById("info").addEventListener("click", (e) => {
-  if (e.target.id === "info") e.currentTarget.style.display = "none";
+  if (e.target.id === "info") {
+    if (cardTimer) clearTimeout(cardTimer);
+    e.currentTarget.style.display = "none";
+  }
 });
 
-// 初期カメラ位置の設定
+// 初期カメラ位置
 viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(-45, 0, 17500000),
   orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
