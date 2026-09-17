@@ -23,7 +23,6 @@ let viewer;
 try {
   setStatus("Cesium読み込み完了。地球を初期化中…");
 
-  // skyBox: true の指定を外し、デフォルトの宇宙背景を安全に有効化
   viewer = new Cesium.Viewer("cesiumContainer", {
     animation: false,
     timeline: false,
@@ -38,23 +37,30 @@ try {
     baseLayer: false
   });
 
-  setStatus("地球の初期化OK。衛星写真を読み込み中…");
+  setStatus("地球の初期化OK。衛星写真と国名を読み込み中…");
 
-  // 高精細な衛星写真タイル（APIキー不要）
+  // 1. 高精細な衛星写真タイル（下地）
   const satelliteImagery = new Cesium.UrlTemplateImageryProvider({
     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     maximumLevel: 19
   });
   viewer.imageryLayers.add(new Cesium.ImageryLayer(satelliteImagery));
 
-  setStatus("衛星写真OK。魚のピンを配置中…");
+  // 2. 国名・都市名・国境線の透過ラベルタイル（上に重ねる）
+  const labelImagery = new Cesium.UrlTemplateImageryProvider({
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    maximumLevel: 19
+  });
+  viewer.imageryLayers.add(new Cesium.ImageryLayer(labelImagery));
+
+  setStatus("マップ準備OK。魚のピンを配置中…");
 } catch (e) {
   console.error(e);
   setStatus("初期化エラー: " + (e && e.message ? e.message : e), true);
   throw e;
 }
 
-// 描画エラーを防ぐための安全なレンダリング設定
+// 描画設定
 viewer.scene.globe.show = true;
 viewer.scene.globe.enableLighting = false;
 viewer.scene.globe.showGroundAtmosphere = false;
