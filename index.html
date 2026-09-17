@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>熱帯魚 3D EARTH ATLAS</title>
+
+  <!-- CesiumJS CDN -->
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Cesium.js"></script>
+
+  <!-- 分割したCSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="status">起動中…</div>
+
+  <div id="hud">
+    <div class="title">🐠 TROPICAL FISH EARTH ATLAS</div>
+    <div class="sub">3D地球を回転 → ピンをクリック → 生息地へ急降下</div>
+  </div>
+
+  <div id="fishList">
+    <h3>HABITAT SELECT</h3>
+    <div id="buttons"></div>
+  </div>
+
+  <div id="info">
+    <button id="close">×</button>
+    <div id="card">
+      <img id="fishImage" alt="">
+      <div>
+        <h1 id="fishName"></h1>
+        <div id="latin"></div>
+        <div class="stats">
+          <div class="stat"><small>HABITAT</small><b id="habitat"></b></div>
+          <div class="stat"><small>WATER TEMP</small><b id="temp"></b></div>
+          <div class="stat"><small>pH</small><b id="ph"></b></div>
+          <div class="stat"><small>HARDNESS</small><b id="hardness"></b></div>
+        </div>
+        <div id="desc"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分割したJavaScript（データ読み込み後にメインスクリプトを実行） -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
