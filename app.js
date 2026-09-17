@@ -37,7 +37,7 @@ try {
     baseLayer: false
   });
 
-  setStatus("地球の初期化OK。衛星写真と国名を読み込み中…");
+  setStatus("地球の初期化OK。衛星写真と日本語地名を読み込み中…");
 
   // 1. 高精細な衛星写真タイル（下地）
   const satelliteImagery = new Cesium.UrlTemplateImageryProvider({
@@ -46,10 +46,11 @@ try {
   });
   viewer.imageryLayers.add(new Cesium.ImageryLayer(satelliteImagery));
 
-  // 2. 国名・都市名・国境線の透過ラベルタイル（上に重ねる）
+  // 2. 日本語対応の国名・地名ラベル（透明レイヤーで上に重ねる）
   const labelImagery = new Cesium.UrlTemplateImageryProvider({
-    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    maximumLevel: 19
+    url: "https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+    maximumLevel: 19,
+    subdomains: ["a", "b", "c", "d"]
   });
   viewer.imageryLayers.add(new Cesium.ImageryLayer(labelImagery));
 
