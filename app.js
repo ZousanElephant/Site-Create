@@ -61,10 +61,11 @@ try {
   throw e;
 }
 
-// 描画設定
+// 描画設定（地球の裏側にあるピンを遮蔽する）
 viewer.scene.globe.show = true;
 viewer.scene.globe.enableLighting = false;
 viewer.scene.globe.showGroundAtmosphere = false;
+viewer.scene.globe.depthTestAgainstTerrain = true;
 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
 const pinEntities = [];
@@ -92,14 +93,13 @@ function makePinCanvas() {
 // 魚の生息地にピンを配置
 function makePin(f) {
   const entity = viewer.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(f.lng, f.lat, 100),
+    position: Cesium.Cartesian3.fromDegrees(f.lng, f.lat, 50000),
     name: f.name,
     billboard: {
       image: makePinCanvas(),
       width: 34,
       height: 34,
-      verticalOrigin: Cesium.VerticalOrigin.CENTER,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY
+      verticalOrigin: Cesium.VerticalOrigin.CENTER
     },
     label: {
       text: f.name,
@@ -108,8 +108,7 @@ function makePin(f) {
       outlineColor: Cesium.Color.BLACK,
       outlineWidth: 4,
       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      pixelOffset: new Cesium.Cartesian2(0, 25),
-      disableDepthTestDistance: Number.POSITIVE_INFINITY
+      pixelOffset: new Cesium.Cartesian2(0, 25)
     }
   });
   entity.fish = f;
