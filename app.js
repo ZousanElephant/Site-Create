@@ -111,6 +111,8 @@ function makePin(f) {
       pixelOffset: new Cesium.Cartesian2(0, 25)
     }
   });
+
+  // Entityにfishプロパティを確実にバインド
   entity.fish = f;
   pinEntities.push(entity);
 }
@@ -128,20 +130,23 @@ fishData.forEach((f) => {
 });
 setStatus("起動完了。地球をドラッグして回転できます。");
 
-let flying = false;
+let currentFlyTarget = null;
 
 // カメラ移動（高度に応じた速度で真上から急降下）
 function flyToFish(f) {
-  flying = true;
+  if (!f) return;
+  currentFlyTarget = f;
+
+  // モーダルを閉じる
   document.getElementById("info").style.display = "none";
 
   const currentHeight = viewer.camera.positionCartographic.height;
 
-  let flyDuration = 2.6;
+  let flyDuration = 2.4;
   if (currentHeight > 10000000) {
-    flyDuration = 3.8;
+    flyDuration = 3.5;
   } else if (currentHeight < 1000000) {
-    flyDuration = 1.2;
+    flyDuration = 1.0;
   }
 
   const currentHeading = viewer.camera.heading;
@@ -156,31 +161,54 @@ function flyToFish(f) {
     },
     duration: flyDuration,
     complete: () => {
-      flying = false;
-      setTimeout(() => showFish(f), 300);
+      // 飛行完了時にカードを表示
+      if (currentFlyTarget === f) {
+        showFish(f);
+      }
+    },
+    cancel: () => {
+      // ユーザーが途中で画面を操作・キャンセルした場合は表示しない
     }
   });
 }
 
 // モーダル表示
 function showFish(f) {
-  document.getElementById("fishName").textContent = f.name;
-  document.getElementById("latin").textContent = f.latin;
-  document.getElementById("habitat").textContent = f.habitat;
-  document.getElementById("temp").textContent = f.temp;
-  document.getElementById("ph").textContent = f.ph;
-  document.getElementById("hardness").textContent = f.hardness;
-  document.getElementById("desc").textContent = f.desc;
-  document.getElementById("fishImage").src = f.image;
-  document.getElementById("fishImage").alt = f.name;
+  if (!f) return;
+  document.getElementById("fishName").textContent = f.name || "";
+  document.getElementById("latin").textContent = f.latin || "";
+  document.getElementById("habitat").textContent = f.habitat || "";
+  document.getElementById("temp").textContent = f.temp || "";
+  document.getElementById("ph").textContent = f.ph || "";
+  document.getElementById("hardness").textContent = f.hardness || "";
+  document.getElementById("desc").textContent = f.desc || "";
+  
+  const imgEl = document.getElementById("fishImage");
+  imgEl.src = f.image || "";
+  imgEl.alt = f.name || "";
+
   document.getElementById("info").style.display = "flex";
 }
 
-// クリックイベント
+// クリックイベントの判定強化（Entityや名前から確実にデータを照合）
 viewer.screenSpaceEventHandler.setInputAction(function (click) {
   const picked = viewer.scene.pick(click.position);
-  if (Cesium.defined(picked) && picked.id && picked.id.fish) {
-    flyToFish(picked.id.fish);
+  
+  if (Cesium.defined(picked)) {
+    let targetFish = null;
+
+    // 1. picked.id に直接 fish が入っている場合
+    if (picked.id && picked.id.fish) {
+      targetFish = picked.id.fish;
+    } 
+    // 2. Entityの名前（name）から fishData を検索して照合
+    else if (picked.id && picked.id.name) {
+      targetFish = fishData.find((f) => f.name === picked.id.name);
+    }
+
+    if (targetFish) {
+      flyToFish(targetFish);
+    }
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
