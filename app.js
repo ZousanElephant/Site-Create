@@ -24,28 +24,31 @@ try {
   setStatus("Cesium読み込み完了。地球を初期化中…");
 
   viewer = new Cesium.Viewer("cesiumContainer", {
-    animation: false,
-    timeline: false,
-    baseLayerPicker: false,
-    geocoder: false,
-    homeButton: false,
-    sceneModePicker: false,
-    navigationHelpButton: false,
-    fullscreenButton: false,
-    infoBox: false,
-    selectionIndicator: false,
-    terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-    baseLayer: false,
-    skyBox: false,
-    skyAtmosphere: false
-  });
+  animation: false,
+  timeline: false,
+  baseLayerPicker: false,
+  geocoder: false,
+  homeButton: false,
+  sceneModePicker: false,
+  navigationHelpButton: false,
+  fullscreenButton: false,
+  infoBox: false,
+  selectionIndicator: false,
+  terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+  baseLayer: false,
+  skyBox: true,          // ← falseからtrueへ（宇宙の星空を表示）
+  skyAtmosphere: true    // ← falseからtrueへ（地球を包む青い大気光を表示）
+});
 
   setStatus("地球の初期化OK。地図タイルを読み込み中…");
 
-  const earthImagery = new Cesium.OpenStreetMapImageryProvider({
-    url: "https://tile.openstreetmap.org/"
-  });
-  viewer.imageryLayers.add(new Cesium.ImageryLayer(earthImagery));
+  // Esriの高精細な衛星写真タイルに差し替え（APIキー不要）
+const earthImagery = new Cesium.UrlTemplateImageryProvider({
+  url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  maximumLevel: 19,
+  credit: "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+});
+viewer.imageryLayers.add(new Cesium.ImageryLayer(earthImagery));
 
   setStatus("地図タイルOK。魚のピンを配置中…");
 } catch (e) {
