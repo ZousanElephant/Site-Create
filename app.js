@@ -36,12 +36,12 @@ try {
     selectionIndicator: false,
     baseLayer: false,
     skyBox: true,
-    skyAtmosphere: true
+    skyAtmosphere: false
   });
 
   setStatus("地球の初期化OK。衛星写真を読み込み中…");
 
-  // 高精細な衛星写真（航空写真）タイルを設定
+  // 高精細な衛星写真タイル（APIキー不要）
   const satelliteImagery = new Cesium.UrlTemplateImageryProvider({
     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     maximumLevel: 19
@@ -55,10 +55,10 @@ try {
   throw e;
 }
 
-// クラッシュの原因となっていた enableLighting を無効化し、大気と背景のみ有効化
+// レンダリングエラーを防ぐため照明・地表大気を無効化
 viewer.scene.globe.show = true;
-viewer.scene.globe.enableLighting = false; 
-viewer.scene.globe.showGroundAtmosphere = true;
+viewer.scene.globe.enableLighting = false;
+viewer.scene.globe.showGroundAtmosphere = false;
 viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
 const pinEntities = [];
@@ -132,7 +132,6 @@ function flyToFish(f) {
 
   const currentHeight = viewer.camera.positionCartographic.height;
 
-  // 高度に応じた秒数の算出
   let flyDuration = 2.6;
   if (currentHeight > 10000000) {
     flyDuration = 3.8;
