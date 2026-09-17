@@ -123,7 +123,7 @@ setStatus("起動完了。地球をドラッグして回転できます。");
 
 let flying = false;
 
-// カメラ移動
+// カメラ移動（まっすぐ真上からズーム）
 function flyToFish(f) {
   flying = true;
   document.getElementById("info").style.display = "none";
@@ -134,10 +134,10 @@ function flyToFish(f) {
     destination,
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-55),
+      pitch: Cesium.Math.toRadians(-90), // まっすぐ真下へ降下
       roll: 0
     },
-    duration: 4.5,
+    duration: 3.5,
     complete: () => {
       flying = false;
       setTimeout(() => showFish(f), 500);
