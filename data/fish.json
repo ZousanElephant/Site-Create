@@ -1,0 +1,58 @@
+[
+  {
+    "id": "neon-tetra",
+    "name": "ネオンテトラ",
+    "scientificName": "Paracheirodon innesi",
+    "lat": -3.4653,
+    "lng": -62.2159,
+    "pinColor": "#38bdf8",
+    "image": "./images/neon-tetra.jpg",
+    "habitat": "南米アマゾン川上流域（ペルー、コロンビア、ブラジル国境付近の支流）。鬱蒼とした熱帯雨林に覆われ、直射日光が遮られた流れの緩やかな小川やブラックウォーター環境に生息します。",
+    "temp": "22〜26℃",
+    "ph": "5.0〜6.5",
+    "hardness": "軟水 (1〜4 dGH)",
+    "waterDesc": "落ち葉や流木から溶け出したタンニン（フミン酸）を豊富に含む、紅茶色の弱酸性・超軟水環境です。"
+  },
+  {
+    "id": "cardinal-tetra",
+    "name": "カージナルテトラ",
+    "scientificName": "Paracheirodon axelrodi",
+    "lat": -0.4167,
+    "lng": -64.8333,
+    "pinColor": "#f43f5e",
+    "image": "./images/cardinal-tetra.jpg",
+    "habitat": "ブラジル・ネグロ川中〜上流域（サンタ・イザベル周辺）およびオリノコ川水系。赤道直下の高温域の細流や浸水林（イガポー）に大群で生息しています。",
+    "temp": "24〜28℃",
+    "ph": "4.5〜6.0",
+    "hardness": "超軟水 (1〜2 dGH)",
+    "waterDesc": "ミネラル分が極めて少ないブラックウォーター。水温が高めで強い酸性を示す傾向があります。"
+  },
+  {
+    "id": "harlequin-rasbora",
+    "name": "ラスボラ・エスペイ",
+    "scientificName": "Trigonostigma espei",
+    "lat": 12.2484,
+    "lng": 102.5152,
+    "pinColor": "#fb923c",
+    "image": "./images/harlequin-rasbora.jpg",
+    "habitat": "タイ南東部（トラート県周辺）〜カンボジアの森林地帯にある小川や湿地帯。水草や岸辺の植物が水面まで覆いかぶさるような穏やかな水域を好みます。",
+    "temp": "23〜27℃",
+    "ph": "5.5〜6.8",
+    "hardness": "軟水 (2〜6 dGH)",
+    "waterDesc": "腐植質を含んだ弱酸性の軟水。クリアウォーターとブラックウォーターの中間的な水質が多い地域です。"
+  },
+  {
+    "id": "rummy-nose-tetra",
+    "name": "ラミーノーズテトラ",
+    "scientificName": "Hemigrammus rhodostomus",
+    "lat": -1.8558,
+    "lng": -52.2302,
+    "pinColor": "#ef4444",
+    "image": "./images/rummy-nose-tetra.jpg",
+    "habitat": "ブラジル・アマゾン川下流域（シングー川合流部周辺）およびオリノコ川水系。水質変化に敏感で、溶存酸素量の多い清浄な支流に生息します。",
+    "temp": "24〜27℃",
+    "ph": "5.5〜6.8",
+    "hardness": "軟水 (2〜5 dGH)",
+    "waterDesc": "透明度が高いクリアウォーター〜弱ブラックウォーター。有機物汚染が少なく安定した弱酸性を好みます。"
+  }
+]
