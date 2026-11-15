@@ -24,7 +24,6 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   requestRenderMode: false
 });
 
-// スマホのGPU描画負荷を軽減
 if (isMobileView()) {
   viewer.resolutionScale = 0.75;
 }
@@ -32,16 +31,72 @@ if (isMobileView()) {
 viewer.scene.globe.depthTestAgainstTerrain = false;
 viewer.scene.globe.enableLighting = false;
 viewer.scene.skyAtmosphere.show = true;
-viewer.scene.globe.maximumScreenSpaceError = isMobileView() ? 3.0 : 2.0;
+viewer.scene.globe.maximumScreenSpaceError = isMobileView() ? 3.5 : 2.0;
 
-// スマホでのピンチ拡大・縮小スピードと感度を最適化
 const controller = viewer.scene.screenSpaceCameraController;
-controller.zoomFactor = isMobileView() ? 12.0 : 5.0;
-controller.inertiaZoom = 0.85;
 controller.inertiaSpin = 0.9;
 controller.minimumZoomDistance = 5000;
+controller.maximumZoomDistance = 30000000;
 
-// 2. ピンアイコンの生成（色ごとにキャッシュしてメモリ節約）
+// スマホ時は標準の遅いピンチズームを無効化し、下の高速カスタムピンチ処理を使う
+if (isMobileView()) {
+  controller.enableZoom = false;
+  controller.enableTilt = false; // 2本指操作で意図せず斜めに傾くのを防ぎ、ズームと回転に専念
+}
+
+// スマホ専用：2本指ピンチのダイレクト高速ズーム処理
+const canvas = viewer.scene.canvas;
+let initialPinchDistance = null;
+
+function getTouchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    initialPinchDistance = getTouchDistance(e.touches);
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2 && initialPinchDistance !== null) {
+    const currentDistance = getTouchDistance(e.touches);
+    const delta = currentDistance - initialPinchDistance;
+
+    // 現在のカメラ高度を取得
+    const cameraHeight = viewer.camera.positionCartographic.height;
+
+    // 指の移動量(delta)に応じて現在の高度の一定割合を一気に移動（感度を大幅に引き上げ）
+    // 係数を大きくするほど少ない指の動きで一気に拡大・縮小する（現在 0.018）
+    const zoomAmount = delta * cameraHeight * 0.018;
+
+    if (zoomAmount > 0) {
+      // 拡大（近づく）：最小高度5kmを下回らないように制限
+      const maxZoomIn = cameraHeight - 5000;
+      if (maxZoomIn > 0) {
+        viewer.camera.zoomIn(Math.min(zoomAmount, maxZoomIn));
+      }
+    } else if (zoomAmount < 0) {
+      // 縮小（離れる）：最大高度30,000kmを超えないように制限
+      const maxZoomOut = 30000000 - cameraHeight;
+      if (maxZoomOut > 0) {
+        viewer.camera.zoomOut(Math.min(Math.abs(zoomAmount), maxZoomOut));
+      }
+    }
+
+    initialPinchDistance = currentDistance;
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) {
+    initialPinchDistance = null;
+  }
+}, { passive: true });
+
+// 2. ピンアイコンの生成（色ごとにキャッシュ）
 const pinCanvasCache = {};
 function createPinCanvas(color) {
   if (pinCanvasCache[color]) {
