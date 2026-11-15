@@ -52,6 +52,11 @@ function createPinCanvas(color) {
   return canvas;
 }
 
+// スマホ判定ヘルパー
+function isMobileView() {
+  return window.innerWidth <= 768;
+}
+
 // 3. 外部JSONから熱帯魚データを読み込んでピンを配置
 async function loadFishData() {
   try {
@@ -68,7 +73,8 @@ async function loadFishData() {
         billboard: {
           image: createPinCanvas(fish.pinColor),
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          scale: 0.85
+          // スマホは指で押しやすいよう少し大きめに表示
+          scale: isMobileView() ? 0.95 : 0.85
         },
         label: {
           text: fish.name,
@@ -78,7 +84,9 @@ async function loadFishData() {
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
-          pixelOffset: new Cesium.Cartesian2(0, 6)
+          pixelOffset: new Cesium.Cartesian2(0, 6),
+          // 50種密集時に引いた画面で文字が重ならないよう、高度6000km以内でラベル表示
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 6000000.0)
         },
         fishData: fish
       });
@@ -91,9 +99,14 @@ async function loadFishData() {
 loadFishData();
 
 // 4. カメラ初期位置・リセット処理
+function getOverviewAltitude() {
+  // スマホの縦長画面では地球全体が左右に見切れないよう高度を高めに設定
+  return isMobileView() ? 24000000 : 16000000;
+}
+
 function flyToOverview() {
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, 16000000),
+    destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, getOverviewAltitude()),
     orientation: {
       heading: 0.0,
       pitch: Cesium.Math.toRadians(-90.0),
@@ -104,16 +117,15 @@ function flyToOverview() {
 }
 
 viewer.camera.setView({
-  destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, 16000000)
+  destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, getOverviewAltitude())
 });
 
-// 5. ピンクリック・ホバー・パネル制御
+// 5. ピンクリック・タップ・パネル制御
 const infoPanel = document.getElementById('info-panel');
 const closeBtn = document.getElementById('close-btn');
 const resetBtn = document.getElementById('reset-btn');
 const panelImg = document.getElementById('panel-img');
 
-// 画像が見つからない場合のフォールバック（グレーのプレースホルダー表示）
 panelImg.addEventListener('error', () => {
   panelImg.src = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect fill="#1e293b" width="400" height="200"/><text fill="#64748b" font-family="sans-serif" font-size="14" x="50%" y="50%" text-anchor="middle" dy=".3em">No Image</text></svg>'
@@ -138,11 +150,14 @@ handler.setInputAction(function (movement) {
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
 function selectFish(fish) {
-  const isMobile = window.innerWidth <= 600;
-  const lngOffset = isMobile ? 0 : 0.04;
+  const mobile = isMobileView();
+  // PC：右パネル避けのため少し東（+lng）へオフセット
+  // スマホ：下半分パネル避けのため少し南（-lat）へオフセットし、上半分の中央にピンを配置
+  const lngOffset = mobile ? 0 : 0.04;
+  const latOffset = mobile ? -0.055 : 0;
 
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat, 35000),
+    destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat + latOffset, 35000),
     orientation: {
       heading: 0.0,
       pitch: Cesium.Math.toRadians(-90.0),
@@ -160,6 +175,7 @@ function selectFish(fish) {
   document.getElementById('panel-hardness').textContent = fish.hardness;
   document.getElementById('panel-water-desc').textContent = fish.waterDesc;
 
+  infoPanel.scrollTop = 0; // 別の魚を開いたときにパネルのスクロール位置を一番上に戻す
   infoPanel.classList.add('active');
 }
 
