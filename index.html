@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界の熱帯魚 生息地3Dマップ（衛星画像版）</title>
+  <title>世界の熱帯魚 生息地3Dマップ</title>
   <!-- CesiumJS CDN -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -230,7 +230,7 @@
   </div>
 
   <script>
-    // 1. 熱帯魚データ
+    // 1. 熱帯魚データ（魚種を追加する場合はこの配列にオブジェクトを追加）
     const fishHabitats = [
       {
         id: 'neon-tetra',
@@ -309,8 +309,8 @@
       selectionIndicator: false
     });
 
-    // 地球儀の裏側にあるオブジェクトを確実に隠す（深度テスト有効化）
-    viewer.scene.globe.depthTestAgainstTerrain = true;
+    // 地形の微妙な凹凸によるピンのめり込みを防ぎつつ、地球の裏側のピンは隠す
+    viewer.scene.globe.depthTestAgainstTerrain = false;
     viewer.scene.globe.enableLighting = false;
 
     // 3. ピンアイコンの生成
@@ -345,16 +345,15 @@
       return canvas;
     }
 
-    // 4. 地球儀上にピンとラベルを配置（disableDepthTestDistance を外して裏側の透けを防止）
+    // 4. 地球儀上にピンとラベルを配置
     fishHabitats.forEach(fish => {
       viewer.entities.add({
         id: fish.id,
-        position: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat, 50), // 地表から50m浮かせてめり込み防止
+        position: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat, 1000),
         billboard: {
           image: createPinCanvas(fish.pinColor),
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          scale: 0.85,
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+          scale: 0.85
         },
         label: {
           text: fish.name,
@@ -364,8 +363,7 @@
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
-          pixelOffset: new Cesium.Cartesian2(0, 6),
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+          pixelOffset: new Cesium.Cartesian2(0, 6)
         },
         fishData: fish
       });
@@ -410,21 +408,19 @@
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     function selectFish(fish) {
-      // ピンを画面のど真ん中（PC画面時は右パネルを避けた有効領域の中央）に捉えて真上からストレートにズーム
       const isMobile = window.innerWidth <= 600;
-      const lngOffset = isMobile ? 0 : 0.04; // 右パネルの横幅分だけわずかに東側を映し、ピンを左側の空きスペース中央へ配置
+      const lngOffset = isMobile ? 0 : 0.04;
 
       viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat, 35000), // 高度35km（真上視点）
+        destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat, 35000),
         orientation: {
           heading: 0.0,
-          pitch: Cesium.Math.toRadians(-90.0), // 真下を向く（回転・傾きなし）
+          pitch: Cesium.Math.toRadians(-90.0),
           roll: 0.0
         },
         duration: 1.4
       });
 
-      // パネル内容を更新
       document.getElementById('panel-img').src = fish.image;
       document.getElementById('panel-name').textContent = fish.name;
       document.getElementById('panel-sci').textContent = fish.scientificName;
