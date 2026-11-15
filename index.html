@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- スマホでのページ全体の勝手な拡大縮小を防止 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>世界の熱帯魚 生息地3Dマップ</title>
   <!-- CesiumJS CDN -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
@@ -16,66 +17,77 @@
       overflow: hidden;
       background-color: #000;
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      touch-action: none; /* スマホでのブラウザ標準スクロール・バウンス防止 */
+      -webkit-tap-highlight-color: transparent;
     }
 
     .cesium-viewer-bottom {
       display: none !important;
     }
 
+    /* ヘッダー */
     #header {
       position: absolute;
-      top: 20px;
-      left: 24px;
+      top: calc(16px + env(safe-area-inset-top));
+      left: 20px;
+      right: 20px;
       z-index: 10;
       pointer-events: none;
       color: #f8fafc;
     }
     #header h1 {
       margin: 0;
-      font-size: 1.4rem;
-      letter-spacing: 0.05em;
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
     }
     #header p {
       margin: 4px 0 0;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #cbd5e1;
       text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
     }
 
+    /* 視点リセットボタン */
     #reset-btn {
       position: absolute;
-      bottom: 24px;
-      left: 24px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      left: 20px;
       z-index: 10;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(15, 23, 42, 0.88);
       color: #e2e8f0;
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 10px;
       padding: 10px 16px;
       font-size: 0.85rem;
+      font-weight: bold;
       cursor: pointer;
       backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
       transition: all 0.2s;
     }
-    #reset-btn:hover {
-      background: rgba(30, 41, 59, 0.95);
-      border-color: #38bdf8;
+    #reset-btn:active {
+      transform: scale(0.96);
     }
 
+    /* 詳細情報パネル（PC版：右サイドバー） */
     #info-panel {
       position: absolute;
       top: 20px;
       right: 20px;
       width: 350px;
       max-height: calc(100vh - 40px);
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(15, 23, 42, 0.92);
       backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border: 1px solid rgba(56, 189, 248, 0.35);
       border-radius: 12px;
       padding: 20px;
       box-sizing: border-box;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch; /* iOSでの滑らかな慣性スクロール */
+      touch-action: pan-y; /* パネル内の縦スクロールを許可 */
       z-index: 20;
       color: #e2e8f0;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
@@ -87,19 +99,32 @@
       transform: translateX(0);
     }
 
+    /* スマホ用のドラッグハンドル（PCでは非表示） */
+    .sheet-handle {
+      display: none;
+    }
+
     #close-btn {
       position: absolute;
-      top: 14px;
-      right: 16px;
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 1.5rem;
+      top: 12px;
+      right: 14px;
+      width: 36px;
+      height: 36px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 50%;
+      color: #cbd5e1;
+      font-size: 1.3rem;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       line-height: 1;
+      z-index: 25;
     }
     #close-btn:hover {
       color: #ffffff;
+      background: rgba(51, 65, 85, 0.95);
     }
 
     .fish-image {
@@ -107,25 +132,25 @@
       height: 195px;
       object-fit: cover;
       border-radius: 8px;
-      margin-top: 8px;
+      margin-top: 4px;
       background-color: #1e293b;
     }
 
     .fish-name {
       margin: 14px 0 2px;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       color: #38bdf8;
     }
 
     .scientific-name {
-      margin: 0 0 14px;
+      margin: 0 0 12px;
       font-size: 0.85rem;
       font-style: italic;
       color: #94a3b8;
     }
 
     .section-title {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: bold;
       color: #7dd3fc;
       letter-spacing: 0.05em;
@@ -151,7 +176,7 @@
       background: rgba(30, 41, 59, 0.85);
       border: 1px solid rgba(148, 163, 184, 0.25);
       border-radius: 6px;
-      padding: 8px 6px;
+      padding: 8px 4px;
       text-align: center;
     }
 
@@ -163,25 +188,51 @@
 
     .param-value {
       display: block;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       font-weight: bold;
       color: #f8fafc;
       margin-top: 2px;
     }
 
-    @media (max-width: 600px) {
+    /* スマホ・タブレット縦画面レイアウト */
+    @media (max-width: 768px) {
+      #header h1 {
+        font-size: 1.15rem;
+      }
+      #header p {
+        font-size: 0.75rem;
+      }
+
       #info-panel {
         top: auto;
         bottom: 0;
         right: 0;
         left: 0;
         width: 100%;
-        max-height: 60vh;
-        border-radius: 16px 16px 0 0;
-        transform: translateY(100%);
+        max-height: 55vh; /* 画面上半分で地図とピンが見える高さを確保 */
+        border-radius: 20px 20px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+        transform: translateY(105%);
       }
+
       #info-panel.active {
         transform: translateY(0);
+      }
+
+      .sheet-handle {
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: rgba(148, 163, 184, 0.5);
+        border-radius: 2px;
+        margin: 0 auto 12px;
+      }
+
+      .fish-image {
+        height: 160px;
       }
     }
   </style>
@@ -190,15 +241,16 @@
 
   <div id="header">
     <h1>Tropical Fish Habitat 3D</h1>
-    <p>衛星マップ上のピンをクリックすると現地の河川・生息域へズームします</p>
+    <p>ピンをタップすると現地の河川・生息域へズームします</p>
   </div>
 
-  <button id="reset-btn">🌍 全体表示に戻る</button>
+  <button id="reset-btn">🌍 全体表示</button>
 
   <div id="cesiumContainer"></div>
 
   <!-- 詳細情報パネル -->
   <div id="info-panel">
+    <div class="sheet-handle"></div>
     <button id="close-btn" title="閉じる">&times;</button>
     <img id="panel-img" class="fish-image" src="" alt="熱帯魚の画像">
     <h2 id="panel-name" class="fish-name"></h2>
@@ -225,7 +277,6 @@
     <p id="panel-water-desc" class="description-text" style="margin-top: 8px;"></p>
   </div>
 
-  <!-- 制御ロジックの読み込み -->
   <script src="./app.js"></script>
 </body>
 </html>
