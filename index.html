@@ -18,7 +18,7 @@
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     }
 
-    /* Cesium標準の不要なUIをスッキリさせる */
+    /* Cesium標準の不要なUIを非表示 */
     .cesium-viewer-bottom {
       display: none !important;
     }
@@ -230,7 +230,7 @@
   </div>
 
   <script>
-    // 1. 熱帯魚データ（河川のすぐ近くに座標を設定するとズーム時に川筋が見えます）
+    // 1. 熱帯魚データ
     const fishHabitats = [
       {
         id: 'neon-tetra',
@@ -290,7 +290,7 @@
       }
     ];
 
-    // 2. Cesium Viewerの初期化（高精細衛星画像レイヤーを使用）
+    // 2. Cesium Viewerの初期化
     const viewer = new Cesium.Viewer('cesiumContainer', {
       baseLayer: Cesium.ImageryLayer.fromProviderAsync(
         Cesium.ArcGisMapServerImageryProvider.fromUrl(
@@ -309,23 +309,22 @@
       selectionIndicator: false
     });
 
-    // 宇宙空間の星・大気表現を強調
+    // 地球儀の裏側にあるオブジェクトを確実に隠す（深度テスト有効化）
+    viewer.scene.globe.depthTestAgainstTerrain = true;
     viewer.scene.globe.enableLighting = false;
 
-    // 3. ピンアイコンをCanvasで動的生成（Google Earth風の立体ピン）
+    // 3. ピンアイコンの生成
     function createPinCanvas(color) {
       const canvas = document.createElement('canvas');
       canvas.width = 48;
       canvas.height = 60;
       const ctx = canvas.getContext('2d');
 
-      // ピンの影
       ctx.beginPath();
       ctx.ellipse(24, 55, 8, 3, 0, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
       ctx.fill();
 
-      // ピン本体
       ctx.beginPath();
       ctx.moveTo(24, 54);
       ctx.bezierCurveTo(24, 54, 6, 33, 6, 20);
@@ -338,7 +337,6 @@
       ctx.strokeStyle = '#ffffff';
       ctx.stroke();
 
-      // 中央の白い丸
       ctx.beginPath();
       ctx.arc(24, 20, 7, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
@@ -347,16 +345,16 @@
       return canvas;
     }
 
-    // 4. 地球儀上にピンとラベルを配置
+    // 4. 地球儀上にピンとラベルを配置（disableDepthTestDistance を外して裏側の透けを防止）
     fishHabitats.forEach(fish => {
       viewer.entities.add({
         id: fish.id,
-        position: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat),
+        position: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat, 50), // 地表から50m浮かせてめり込み防止
         billboard: {
           image: createPinCanvas(fish.pinColor),
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           scale: 0.85,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
+          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
         },
         label: {
           text: fish.name,
@@ -367,17 +365,22 @@
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
           pixelOffset: new Cesium.Cartesian2(0, 6),
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
+          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
         },
         fishData: fish
       });
     });
 
-    // 初期カメラ位置（南米〜大西洋上空）
+    // 初期カメラ位置
     function flyToOverview() {
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, 16000000),
-        duration: 1.5
+        orientation: {
+          heading: 0.0,
+          pitch: Cesium.Math.toRadians(-90.0),
+          roll: 0.0
+        },
+        duration: 1.4
       });
     }
     viewer.camera.setView({
@@ -397,7 +400,6 @@
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // ホバー時にカーソルをポインターに変更
     handler.setInputAction(function (movement) {
       const pickedObject = viewer.scene.pick(movement.endPosition);
       if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
@@ -408,15 +410,18 @@
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     function selectFish(fish) {
-      // Google Earth風に斜め上空から現地の河川へダイブするようにズームイン
+      // ピンを画面のど真ん中（PC画面時は右パネルを避けた有効領域の中央）に捉えて真上からストレートにズーム
+      const isMobile = window.innerWidth <= 600;
+      const lngOffset = isMobile ? 0 : 0.04; // 右パネルの横幅分だけわずかに東側を映し、ピンを左側の空きスペース中央へ配置
+
       viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat - 0.15, 25000), // 高度25kmまで接近
+        destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat, 35000), // 高度35km（真上視点）
         orientation: {
-          heading: Cesium.Math.toRadians(0.0),
-          pitch: Cesium.Math.toRadians(-55.0), // 斜め見下ろし角度
+          heading: 0.0,
+          pitch: Cesium.Math.toRadians(-90.0), // 真下を向く（回転・傾きなし）
           roll: 0.0
         },
-        duration: 2.0
+        duration: 1.4
       });
 
       // パネル内容を更新
