@@ -1,3 +1,8 @@
+// スマホ判定ヘルパー
+function isMobileView() {
+  return window.innerWidth <= 768;
+}
+
 // 1. Cesium Viewerの初期化
 const viewer = new Cesium.Viewer('cesiumContainer', {
   baseLayer: Cesium.ImageryLayer.fromProviderAsync(
@@ -14,14 +19,35 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   timeline: false,
   fullscreenButton: false,
   infoBox: false,
-  selectionIndicator: false
+  selectionIndicator: false,
+  msaaSamples: 1,
+  requestRenderMode: false
 });
+
+// スマホのGPU描画負荷を軽減
+if (isMobileView()) {
+  viewer.resolutionScale = 0.75;
+}
 
 viewer.scene.globe.depthTestAgainstTerrain = false;
 viewer.scene.globe.enableLighting = false;
+viewer.scene.skyAtmosphere.show = true;
+viewer.scene.globe.maximumScreenSpaceError = isMobileView() ? 3.0 : 2.0;
 
-// 2. ピンアイコンの生成
+// スマホでのピンチ拡大・縮小スピードと感度を最適化
+const controller = viewer.scene.screenSpaceCameraController;
+controller.zoomFactor = isMobileView() ? 12.0 : 5.0;
+controller.inertiaZoom = 0.85;
+controller.inertiaSpin = 0.9;
+controller.minimumZoomDistance = 5000;
+
+// 2. ピンアイコンの生成（色ごとにキャッシュしてメモリ節約）
+const pinCanvasCache = {};
 function createPinCanvas(color) {
+  if (pinCanvasCache[color]) {
+    return pinCanvasCache[color];
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = 48;
   canvas.height = 60;
@@ -49,12 +75,8 @@ function createPinCanvas(color) {
   ctx.fillStyle = '#ffffff';
   ctx.fill();
 
+  pinCanvasCache[color] = canvas;
   return canvas;
-}
-
-// スマホ判定ヘルパー
-function isMobileView() {
-  return window.innerWidth <= 768;
 }
 
 // 3. 外部JSONから熱帯魚データを読み込んでピンを配置
@@ -73,7 +95,6 @@ async function loadFishData() {
         billboard: {
           image: createPinCanvas(fish.pinColor),
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          // スマホは指で押しやすいよう少し大きめに表示
           scale: isMobileView() ? 0.95 : 0.85
         },
         label: {
@@ -85,7 +106,6 @@ async function loadFishData() {
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
           pixelOffset: new Cesium.Cartesian2(0, 6),
-          // 50種密集時に引いた画面で文字が重ならないよう、高度6000km以内でラベル表示
           distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 6000000.0)
         },
         fishData: fish
@@ -100,7 +120,6 @@ loadFishData();
 
 // 4. カメラ初期位置・リセット処理
 function getOverviewAltitude() {
-  // スマホの縦長画面では地球全体が左右に見切れないよう高度を高めに設定
   return isMobileView() ? 24000000 : 16000000;
 }
 
@@ -112,7 +131,7 @@ function flyToOverview() {
       pitch: Cesium.Math.toRadians(-90.0),
       roll: 0.0
     },
-    duration: 1.4
+    duration: 1.2
   });
 }
 
@@ -140,19 +159,19 @@ handler.setInputAction(function (click) {
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-handler.setInputAction(function (movement) {
-  const pickedObject = viewer.scene.pick(movement.endPosition);
-  if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
-    viewer.container.style.cursor = 'pointer';
-  } else {
-    viewer.container.style.cursor = 'default';
-  }
-}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+if (!isMobileView()) {
+  handler.setInputAction(function (movement) {
+    const pickedObject = viewer.scene.pick(movement.endPosition);
+    if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
+      viewer.container.style.cursor = 'pointer';
+    } else {
+      viewer.container.style.cursor = 'default';
+    }
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+}
 
 function selectFish(fish) {
   const mobile = isMobileView();
-  // PC：右パネル避けのため少し東（+lng）へオフセット
-  // スマホ：下半分パネル避けのため少し南（-lat）へオフセットし、上半分の中央にピンを配置
   const lngOffset = mobile ? 0 : 0.04;
   const latOffset = mobile ? -0.055 : 0;
 
@@ -163,7 +182,7 @@ function selectFish(fish) {
       pitch: Cesium.Math.toRadians(-90.0),
       roll: 0.0
     },
-    duration: 1.4
+    duration: 1.2
   });
 
   panelImg.src = fish.image;
@@ -175,7 +194,7 @@ function selectFish(fish) {
   document.getElementById('panel-hardness').textContent = fish.hardness;
   document.getElementById('panel-water-desc').textContent = fish.waterDesc;
 
-  infoPanel.scrollTop = 0; // 別の魚を開いたときにパネルのスクロール位置を一番上に戻す
+  infoPanel.scrollTop = 0;
   infoPanel.classList.add('active');
 }
 
