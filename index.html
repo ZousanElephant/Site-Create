@@ -3,50 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>熱帯魚 3D EARTH ATLAS</title>
+  <title>世界の熱帯魚 生息地3Dマップ</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000510;
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      color: #e2e8f0;
+    }
 
-  <!-- CesiumJS CDN -->
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Cesium.js"></script>
+    #globeViz {
+      width: 100vw;
+      height: 100vh;
+    }
 
-  <!--  -->
-  <link rel="stylesheet" href="style.css">
+    /* タイトルオーバーレイ */
+    #header {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+    #header p {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    /* 詳細情報サイドパネル */
+    #info-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      transform: translateX(400px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #info-panel.active {
+      transform: translateX(0);
+    }
+
+    #close-btn {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #close-btn:hover {
+      color: #ffffff;
+    }
+
+    .fish-image {
+      width: 100%;
+      height: 190px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 8px;
+      background-color: #1e293b;
+    }
+
+    .fish-name {
+      margin: 14px 0 2px;
+      font-size: 1.3rem;
+      color: #38bdf8;
+    }
+
+    .scientific-name {
+      margin: 0 0 14px;
+      font-size: 0.85rem;
+      font-style: italic;
+      color: #94a3b8;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #7dd3fc;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 14px 0 6px;
+      border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+      padding-bottom: 3px;
+    }
+
+    .description-text {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* 水質データグリッド */
+    .water-params {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .param-box {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 6px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+
+    .param-label {
+      display: block;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+
+    .param-value {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    /* スマホ対応 */
+    @media (max-width: 600px) {
+      #info-panel {
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 60vh;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(100%);
+      }
+      #info-panel.active {
+        transform: translateY(0);
+      }
+    }
+  </style>
+  <!-- Globe.gl CDN -->
+  <script src="//unpkg.com/globe.gl"></script>
 </head>
-
 <body>
-  <div id="cesiumContainer"></div>
-  <div id="status">起動中…</div>
 
-  <div id="hud">
-    <div class="title">🐠 TROPICAL FISH EARTH ATLAS</div>
-    <div class="sub">3D地球を回転 → ピンをクリック → 生息地へ急降下</div>
+  <div id="header">
+    <h1>Tropical Fish Habitat 3D</h1>
+    <p>地球儀上のピンをクリックすると生息地へズームします</p>
   </div>
 
-  <div id="fishList">
-    <h3>HABITAT SELECT</h3>
-    <div id="buttons"></div>
-  </div>
+  <div id="globeViz"></div>
 
-  <div id="info">
-    <button id="close">×</button>
-    <div id="card">
-      <img id="fishImage" alt="">
-      <div>
-        <h1 id="fishName"></h1>
-        <div id="latin"></div>
-        <div class="stats">
-          <div class="stat"><small>HABITAT</small><b id="habitat"></b></div>
-          <div class="stat"><small>WATER TEMP</small><b id="temp"></b></div>
-          <div class="stat"><small>pH</small><b id="ph"></b></div>
-          <div class="stat"><small>HARDNESS</small><b id="hardness"></b></div>
-        </div>
-        <div id="desc"></div>
+  <!-- 詳細情報パネル -->
+  <div id="info-panel">
+    <button id="close-btn" title="閉じる">&times;</button>
+    <img id="panel-img" class="fish-image" src="" alt="熱帯魚の画像">
+    <h2 id="panel-name" class="fish-name"></h2>
+    <p id="panel-sci" class="scientific-name"></p>
+
+    <div class="section-title">生息地・環境</div>
+    <p id="panel-habitat" class="description-text"></p>
+
+    <div class="section-title">現地の水質目安</div>
+    <div class="water-params">
+      <div class="param-box">
+        <span class="param-label">水温</span>
+        <span id="panel-temp" class="param-value"></span>
+      </div>
+      <div class="param-box">
+        <span class="param-label">pH</span>
+        <span id="panel-ph" class="param-value"></span>
+      </div>
+      <div class="param-box">
+        <span class="param-label">硬度</span>
+        <span id="panel-hardness" class="param-value"></span>
       </div>
     </div>
+    <p id="panel-water-desc" class="description-text" style="margin-top: 8px;"></p>
   </div>
 
-  <!-- 分割したJavaScript（データ読み込み後にメインスクリプトを実行） -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script>
+    // 1. 熱帯魚データ（ここに追加していくだけでピンが増えます）
+    const fishHabitats = [
+      {
+        id: 'neon-tetra',
+        name: 'ネオンテトラ',
+        scientificName: 'Paracheirodon innesi',
+        lat: -3.4653,
+        lng: -62.2159,
+        color: '#38bdf8',
+        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Paracheirodon_innesi_1.jpg/640px-Paracheirodon_innesi_1.jpg',
+        habitat: '南米アマゾン川上流域（ペルー、コロンビア、ブラジル国境付近の支流）。鬱蒼とした熱帯雨林に覆われ、直射日光が遮られた流れの緩やかな小川やブラックウォーター環境に生息します。',
+        temp: '22〜26℃',
+        ph: '5.0〜6.5',
+        hardness: '軟水 (1〜4 dGH)',
+        waterDesc: '落ち葉や流木から溶け出したタンニン（フミン酸）を豊富に含む、紅茶色の弱酸性・超軟水環境です。'
+      },
+      {
+        id: 'cardinal-tetra',
+        name: 'カージナルテトラ',
+        scientificName: 'Paracheirodon axelrodi',
+        lat: 0.5667,
+        lng: -63.1833,
+        color: '#f43f5e',
+        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Paracheirodon_axelrodi_-_Cardinal_tetra.jpg/640px-Paracheirodon_axelrodi_-_Cardinal_tetra.jpg',
+        habitat: 'ネグロ川中〜上流域およびオリノコ川水系。ネオンテトラよりもさらに赤道に近い高温域の細流や浸水林（イガポー）に群泳しています。',
+        temp: '24〜28℃',
+        ph: '4.5〜6.0',
+        hardness: '超軟水 (1〜2 dGH)',
+        waterDesc: 'ミネラル分が極めて少ないブラックウォーター。水温が高めで強い酸性を示す傾向があります。'
+      },
+      {
+        id: 'harlequin-rasbora',
+        name: 'ラスボラ・エスペイ',
+        scientificName: 'Trigonostigma espei',
+        lat: 12.2484,
+        lng: 102.5152,
+        color: '#fb923c',
+        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Trigonostigma_espei.jpg/640px-Trigonostigma_espei.jpg',
+        habitat: 'タイ南東部〜カンボジアの森林地帯にある小川や湿地帯。水草や岸辺の植物が水面まで覆いかぶさるような穏やかな水域を好みます。',
+        temp: '23〜27℃',
+        ph: '5.5〜6.8',
+        hardness: '軟水 (2〜6 dGH)',
+        waterDesc: '腐植質を含んだ弱酸性の軟水。クリアウォーターとブラックウォーターの中間的な水質が多い地域です。'
+      },
+      {
+        id: 'rummy-nose-tetra',
+        name: 'ラミーノーズテトラ',
+        scientificName: 'Hemigrammus rhodostomus',
+        lat: -1.4558,
+        lng: -48.4902,
+        color: '#ef4444',
+        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Hemigrammus_bleheri.jpg/640px-Hemigrammus_bleheri.jpg',
+        habitat: 'ブラジル・アマゾン川下流域（パラ州周辺）およびオリノコ川水系。水質変化に敏感で、溶存酸素量の多い清浄な支流に生息します。',
+        temp: '24〜27℃',
+        ph: '5.5〜6.8',
+        hardness: '軟水 (2〜5 dGH)',
+        waterDesc: '透明度が高いクリアウォーター〜弱ブラックウォーター。有機物汚染が少なく安定した弱酸性を好みます。'
+      }
+    ];
+
+    // 2. 地球儀の初期化
+    const globeContainer = document.getElementById('globeViz');
+    const world = Globe()(globeContainer)
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+      .pointsData(fishHabitats)
+      .pointLat('lat')
+      .pointLng('lng')
+      .pointColor('color')
+      .pointAltitude(0.06)
+      .pointRadius(0.6)
+      .pointLabel(d => `<b>${d.name}</b><br><span style="font-size:11px;">クリックして詳細を表示</span>`)
+      .onPointClick(fish => {
+        selectFish(fish);
+      });
+
+    // 初期カメラ位置（南米〜大西洋あたりを俯瞰）
+    world.pointOfView({ lat: 0, lng: -30, altitude: 2.2 }, 0);
+
+    // 自動回転（操作時は停止）
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.4;
+    globeContainer.addEventListener('pointerdown', () => {
+      world.controls().autoRotate = false;
+    });
+
+    // リサイズ対応
+    window.addEventListener('resize', () => {
+      world.width(window.innerWidth);
+      world.height(window.innerHeight);
+    });
+
+    // 3. ピンクリック時のズーム＆パネル表示処理
+    const infoPanel = document.getElementById('info-panel');
+    const closeBtn = document.getElementById('close-btn');
+
+    function selectFish(fish) {
+      // カメラを該当座標へズームイン（1.2秒かけて移動）
+      world.pointOfView({
+        lat: fish.lat,
+        lng: fish.lng,
+        altitude: 0.45 // 値を小さくするとより地表に近づく
+      }, 1200);
+
+      // パネルの内容を更新
+      document.getElementById('panel-img').src = fish.image;
+      document.getElementById('panel-name').textContent = fish.name;
+      document.getElementById('panel-sci').textContent = fish.scientificName;
+      document.getElementById('panel-habitat').textContent = fish.habitat;
+      document.getElementById('panel-temp').textContent = fish.temp;
+      document.getElementById('panel-ph').textContent = fish.ph;
+      document.getElementById('panel-hardness').textContent = fish.hardness;
+      document.getElementById('panel-water-desc').textContent = fish.waterDesc;
+
+      // パネルを表示
+      infoPanel.classList.add('active');
+    }
+
+    // パネルを閉じる処理
+    closeBtn.addEventListener('click', () => {
+      infoPanel.classList.remove('active');
+    });
+  </script>
 </body>
 </html>
