@@ -38,63 +38,11 @@ controller.inertiaSpin = 0.9;
 controller.minimumZoomDistance = 5000;
 controller.maximumZoomDistance = 30000000;
 
-// スマホ時は標準の遅いピンチズームを無効化し、下の高速カスタムピンチ処理を使う
+// スマホ時はCesium標準の遅いピンチズームと傾きを無効化
 if (isMobileView()) {
   controller.enableZoom = false;
-  controller.enableTilt = false; // 2本指操作で意図せず斜めに傾くのを防ぎ、ズームと回転に専念
+  controller.enableTilt = false;
 }
-
-// スマホ専用：2本指ピンチのダイレクト高速ズーム処理
-const canvas = viewer.scene.canvas;
-let initialPinchDistance = null;
-
-function getTouchDistance(touches) {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.hypot(dx, dy);
-}
-
-canvas.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 2) {
-    initialPinchDistance = getTouchDistance(e.touches);
-  }
-}, { passive: true });
-
-canvas.addEventListener('touchmove', (e) => {
-  if (e.touches.length === 2 && initialPinchDistance !== null) {
-    const currentDistance = getTouchDistance(e.touches);
-    const delta = currentDistance - initialPinchDistance;
-
-    // 現在のカメラ高度を取得
-    const cameraHeight = viewer.camera.positionCartographic.height;
-
-    // 指の移動量(delta)に応じて現在の高度の一定割合を一気に移動（感度を大幅に引き上げ）
-    // 係数を大きくするほど少ない指の動きで一気に拡大・縮小する（現在 0.018）
-    const zoomAmount = delta * cameraHeight * 0.018;
-
-    if (zoomAmount > 0) {
-      // 拡大（近づく）：最小高度5kmを下回らないように制限
-      const maxZoomIn = cameraHeight - 5000;
-      if (maxZoomIn > 0) {
-        viewer.camera.zoomIn(Math.min(zoomAmount, maxZoomIn));
-      }
-    } else if (zoomAmount < 0) {
-      // 縮小（離れる）：最大高度30,000kmを超えないように制限
-      const maxZoomOut = 30000000 - cameraHeight;
-      if (maxZoomOut > 0) {
-        viewer.camera.zoomOut(Math.min(Math.abs(zoomAmount), maxZoomOut));
-      }
-    }
-
-    initialPinchDistance = currentDistance;
-  }
-}, { passive: true });
-
-canvas.addEventListener('touchend', (e) => {
-  if (e.touches.length < 2) {
-    initialPinchDistance = null;
-  }
-}, { passive: true });
 
 // 2. ピンアイコンの生成（色ごとにキャッシュ）
 const pinCanvasCache = {};
@@ -194,7 +142,7 @@ viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, getOverviewAltitude())
 });
 
-// 5. ピンクリック・タップ・パネル制御
+// 5. ピンクリック・タップ・高速ピンチズーム・パネル制御
 const infoPanel = document.getElementById('info-panel');
 const closeBtn = document.getElementById('close-btn');
 const resetBtn = document.getElementById('reset-btn');
@@ -207,6 +155,8 @@ panelImg.addEventListener('error', () => {
 });
 
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+// タップ / クリックでピン選択
 handler.setInputAction(function (click) {
   const pickedObject = viewer.scene.pick(click.position);
   if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
@@ -214,6 +164,45 @@ handler.setInputAction(function (click) {
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
+// Cesium純正のPINCHイベントを使った高速拡大・縮小処理
+handler.setInputAction(function () {
+  if (isMobileView()) {
+    // 2本指ピンチ中は地球儀の回転を一時停止してズームに専念させる
+    controller.enableRotate = false;
+  }
+}, Cesium.ScreenSpaceEventType.PINCH_START);
+
+handler.setInputAction(function (movement) {
+  if (!isMobileView()) return;
+
+  // movement.distance.endPosition.y と startPosition.y の差分が指の開閉量（ピクセル）
+  const delta = movement.distance.endPosition.y - movement.distance.startPosition.y;
+  const cameraHeight = viewer.camera.positionCartographic.height;
+
+  // 指の移動量に比例して一気に高度を変更（係数 0.025 で高速ズーム）
+  const zoomAmount = delta * cameraHeight * 0.025;
+
+  if (zoomAmount > 0) {
+    const maxZoomIn = cameraHeight - 5000;
+    if (maxZoomIn > 0) {
+      viewer.camera.zoomIn(Math.min(zoomAmount, maxZoomIn));
+    }
+  } else if (zoomAmount < 0) {
+    const maxZoomOut = 30000000 - cameraHeight;
+    if (maxZoomOut > 0) {
+      viewer.camera.zoomOut(Math.min(Math.abs(zoomAmount), maxZoomOut));
+    }
+  }
+}, Cesium.ScreenSpaceEventType.PINCH_MOVE);
+
+handler.setInputAction(function () {
+  if (isMobileView()) {
+    // ピンチ終了後に1本指での地球儀回転を再開
+    controller.enableRotate = true;
+  }
+}, Cesium.ScreenSpaceEventType.PINCH_END);
+
+// PCのみホバー時にカーソルをポインターに変更
 if (!isMobileView()) {
   handler.setInputAction(function (movement) {
     const pickedObject = viewer.scene.pick(movement.endPosition);
