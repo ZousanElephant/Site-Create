@@ -18,12 +18,10 @@
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     }
 
-    /* Cesium標準の不要なUIを非表示 */
     .cesium-viewer-bottom {
       display: none !important;
     }
 
-    /* ヘッダー */
     #header {
       position: absolute;
       top: 20px;
@@ -45,7 +43,6 @@
       text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
     }
 
-    /* 視点リセットボタン */
     #reset-btn {
       position: absolute;
       bottom: 24px;
@@ -66,7 +63,6 @@
       border-color: #38bdf8;
     }
 
-    /* 詳細情報サイドパネル */
     #info-panel {
       position: absolute;
       top: 20px;
@@ -229,218 +225,7 @@
     <p id="panel-water-desc" class="description-text" style="margin-top: 8px;"></p>
   </div>
 
-  <script>
-    // 1. 熱帯魚データ（魚種を追加する場合はこの配列にオブジェクトを追加）
-    const fishHabitats = [
-      {
-        id: 'neon-tetra',
-        name: 'ネオンテトラ',
-        scientificName: 'Paracheirodon innesi',
-        lat: -3.4653,
-        lng: -62.2159,
-        pinColor: '#38bdf8',
-        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Paracheirodon_innesi_1.jpg/640px-Paracheirodon_innesi_1.jpg',
-        habitat: '南米アマゾン川上流域（ペルー、コロンビア、ブラジル国境付近の支流）。鬱蒼とした熱帯雨林に覆われ、直射日光が遮られた流れの緩やかな小川やブラックウォーター環境に生息します。',
-        temp: '22〜26℃',
-        ph: '5.0〜6.5',
-        hardness: '軟水 (1〜4 dGH)',
-        waterDesc: '落ち葉や流木から溶け出したタンニン（フミン酸）を豊富に含む、紅茶色の弱酸性・超軟水環境です。'
-      },
-      {
-        id: 'cardinal-tetra',
-        name: 'カージナルテトラ',
-        scientificName: 'Paracheirodon axelrodi',
-        lat: -0.4167,
-        lng: -64.8333,
-        pinColor: '#f43f5e',
-        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Paracheirodon_axelrodi_-_Cardinal_tetra.jpg/640px-Paracheirodon_axelrodi_-_Cardinal_tetra.jpg',
-        habitat: 'ブラジル・ネグロ川中〜上流域（サンタ・イザベル周辺）およびオリノコ川水系。赤道直下の高温域の細流や浸水林（イガポー）に大群で生息しています。',
-        temp: '24〜28℃',
-        ph: '4.5〜6.0',
-        hardness: '超軟水 (1〜2 dGH)',
-        waterDesc: 'ミネラル分が極めて少ないブラックウォーター。水温が高めで強い酸性を示す傾向があります。'
-      },
-      {
-        id: 'harlequin-rasbora',
-        name: 'ラスボラ・エスペイ',
-        scientificName: 'Trigonostigma espei',
-        lat: 12.2484,
-        lng: 102.5152,
-        pinColor: '#fb923c',
-        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Trigonostigma_espei.jpg/640px-Trigonostigma_espei.jpg',
-        habitat: 'タイ南東部（トラート県周辺）〜カンボジアの森林地帯にある小川や湿地帯。水草や岸辺の植物が水面まで覆いかぶさるような穏やかな水域を好みます。',
-        temp: '23〜27℃',
-        ph: '5.5〜6.8',
-        hardness: '軟水 (2〜6 dGH)',
-        waterDesc: '腐植質を含んだ弱酸性の軟水。クリアウォーターとブラックウォーターの中間的な水質が多い地域です。'
-      },
-      {
-        id: 'rummy-nose-tetra',
-        name: 'ラミーノーズテトラ',
-        scientificName: 'Hemigrammus rhodostomus',
-        lat: -1.8558,
-        lng: -52.2302,
-        pinColor: '#ef4444',
-        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Hemigrammus_bleheri.jpg/640px-Hemigrammus_bleheri.jpg',
-        habitat: 'ブラジル・アマゾン川下流域（シングー川合流部周辺）およびオリノコ川水系。水質変化に敏感で、溶存酸素量の多い清浄な支流に生息します。',
-        temp: '24〜27℃',
-        ph: '5.5〜6.8',
-        hardness: '軟水 (2〜5 dGH)',
-        waterDesc: '透明度が高いクリアウォーター〜弱ブラックウォーター。有機物汚染が少なく安定した弱酸性を好みます。'
-      }
-    ];
-
-    // 2. Cesium Viewerの初期化
-    const viewer = new Cesium.Viewer('cesiumContainer', {
-      baseLayer: Cesium.ImageryLayer.fromProviderAsync(
-        Cesium.ArcGisMapServerImageryProvider.fromUrl(
-          'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
-        )
-      ),
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      animation: false,
-      timeline: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false
-    });
-
-    // 地形の微妙な凹凸によるピンのめり込みを防ぎつつ、地球の裏側のピンは隠す
-    viewer.scene.globe.depthTestAgainstTerrain = false;
-    viewer.scene.globe.enableLighting = false;
-
-    // 3. ピンアイコンの生成
-    function createPinCanvas(color) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 48;
-      canvas.height = 60;
-      const ctx = canvas.getContext('2d');
-
-      ctx.beginPath();
-      ctx.ellipse(24, 55, 8, 3, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(24, 54);
-      ctx.bezierCurveTo(24, 54, 6, 33, 6, 20);
-      ctx.arc(24, 20, 18, Math.PI, 0, false);
-      ctx.bezierCurveTo(42, 33, 24, 54, 24, 54);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(24, 20, 7, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-
-      return canvas;
-    }
-
-    // 4. 地球儀上にピンとラベルを配置
-    fishHabitats.forEach(fish => {
-      viewer.entities.add({
-        id: fish.id,
-        position: Cesium.Cartesian3.fromDegrees(fish.lng, fish.lat, 1000),
-        billboard: {
-          image: createPinCanvas(fish.pinColor),
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          scale: 0.85
-        },
-        label: {
-          text: fish.name,
-          font: 'bold 13px "Hiragino Sans", "Meiryo", sans-serif',
-          fillColor: Cesium.Color.WHITE,
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 3,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: Cesium.VerticalOrigin.TOP,
-          pixelOffset: new Cesium.Cartesian2(0, 6)
-        },
-        fishData: fish
-      });
-    });
-
-    // 初期カメラ位置
-    function flyToOverview() {
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, 16000000),
-        orientation: {
-          heading: 0.0,
-          pitch: Cesium.Math.toRadians(-90.0),
-          roll: 0.0
-        },
-        duration: 1.4
-      });
-    }
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, 16000000)
-    });
-
-    // 5. ピンクリック時のズーム＆パネル表示処理
-    const infoPanel = document.getElementById('info-panel');
-    const closeBtn = document.getElementById('close-btn');
-    const resetBtn = document.getElementById('reset-btn');
-
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction(function (click) {
-      const pickedObject = viewer.scene.pick(click.position);
-      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
-        selectFish(pickedObject.id.fishData);
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    handler.setInputAction(function (movement) {
-      const pickedObject = viewer.scene.pick(movement.endPosition);
-      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
-        viewer.container.style.cursor = 'pointer';
-      } else {
-        viewer.container.style.cursor = 'default';
-      }
-    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-
-    function selectFish(fish) {
-      const isMobile = window.innerWidth <= 600;
-      const lngOffset = isMobile ? 0 : 0.04;
-
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(fish.lng + lngOffset, fish.lat, 35000),
-        orientation: {
-          heading: 0.0,
-          pitch: Cesium.Math.toRadians(-90.0),
-          roll: 0.0
-        },
-        duration: 1.4
-      });
-
-      document.getElementById('panel-img').src = fish.image;
-      document.getElementById('panel-name').textContent = fish.name;
-      document.getElementById('panel-sci').textContent = fish.scientificName;
-      document.getElementById('panel-habitat').textContent = fish.habitat;
-      document.getElementById('panel-temp').textContent = fish.temp;
-      document.getElementById('panel-ph').textContent = fish.ph;
-      document.getElementById('panel-hardness').textContent = fish.hardness;
-      document.getElementById('panel-water-desc').textContent = fish.waterDesc;
-
-      infoPanel.classList.add('active');
-    }
-
-    closeBtn.addEventListener('click', () => {
-      infoPanel.classList.remove('active');
-    });
-
-    resetBtn.addEventListener('click', () => {
-      infoPanel.classList.remove('active');
-      flyToOverview();
-    });
-  </script>
+  <!-- 制御ロジックの読み込み -->
+  <script src="./app.js"></script>
 </body>
 </html>
