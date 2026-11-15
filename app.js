@@ -38,7 +38,6 @@ controller.inertiaSpin = 0.9;
 controller.minimumZoomDistance = 5000;
 controller.maximumZoomDistance = 30000000;
 
-// スマホ時は標準のピンチズームと傾きを無効化
 if (isMobileView()) {
   controller.enableZoom = false;
   controller.enableTilt = false;
@@ -156,7 +155,6 @@ panelImg.addEventListener('error', () => {
 
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
-// タップ / クリックでピン選択
 handler.setInputAction(function (click) {
   const pickedObject = viewer.scene.pick(click.position);
   if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.fishData) {
@@ -164,18 +162,15 @@ handler.setInputAction(function (click) {
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// ピンチ操作開始時に地球儀の回転を停止
 handler.setInputAction(function () {
   if (isMobileView()) {
     controller.enableRotate = false;
   }
 }, Cesium.ScreenSpaceEventType.PINCH_START);
 
-// ピンチ中の高度ダイレクト変更（衝突判定によるブレーキを完全回避）
 handler.setInputAction(function (movement) {
   if (!isMobileView()) return;
 
-  // 2本指の距離変化（pixel）を取得
   const startDist = Cesium.Cartesian2.magnitude(movement.distance.startPosition);
   const endDist = Cesium.Cartesian2.magnitude(movement.distance.endPosition);
   const delta = endDist - startDist;
@@ -185,9 +180,7 @@ handler.setInputAction(function (movement) {
   const cartographic = viewer.camera.positionCartographic;
   const currentHeight = cartographic.height;
 
-  // 指を1px広げるごとに現在の高度の1.5%ずつ一気に縮める（閉じる時は広げる）
   const scaleFactor = 1.0 - (delta * 0.015);
-  // 1フレームあたりの急激すぎる変化を抑えつつ最小5km〜最大30,000kmの範囲に収める
   const clampedScale = Math.max(0.7, Math.min(1.3, scaleFactor));
   const newHeight = Math.max(5000, Math.min(30000000, currentHeight * clampedScale));
 
@@ -211,7 +204,6 @@ handler.setInputAction(function () {
   }
 }, Cesium.ScreenSpaceEventType.PINCH_END);
 
-// PCのみホバー時にカーソルをポインターに変更
 if (!isMobileView()) {
   handler.setInputAction(function (movement) {
     const pickedObject = viewer.scene.pick(movement.endPosition);
@@ -221,6 +213,12 @@ if (!isMobileView()) {
       viewer.container.style.cursor = 'default';
     }
   }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+}
+
+function closeInfoPanel() {
+  infoPanel.style.transform = '';
+  infoPanel.style.transition = '';
+  infoPanel.classList.remove('active');
 }
 
 function selectFish(fish) {
@@ -247,15 +245,76 @@ function selectFish(fish) {
   document.getElementById('panel-hardness').textContent = fish.hardness;
   document.getElementById('panel-water-desc').textContent = fish.waterDesc;
 
+  infoPanel.style.transform = '';
+  infoPanel.style.transition = '';
   infoPanel.scrollTop = 0;
   infoPanel.classList.add('active');
 }
 
-closeBtn.addEventListener('click', () => {
-  infoPanel.classList.remove('active');
-});
+closeBtn.addEventListener('click', closeInfoPanel);
 
 resetBtn.addEventListener('click', () => {
-  infoPanel.classList.remove('active');
+  closeInfoPanel();
   flyToOverview();
 });
+
+// 6. スマホ用：ボトムシートの下スワイプで閉じる処理
+let touchStartY = 0;
+let currentDeltaY = 0;
+let isDraggingPanel = false;
+
+infoPanel.addEventListener('touchstart', (e) => {
+  if (!isMobileView() || !infoPanel.classList.contains('active')) return;
+
+  // スクロール位置が一番上（0以下）のときだけ引き下げジェスチャーを開始可能にする
+  if (infoPanel.scrollTop <= 0) {
+    touchStartY = e.touches[0].clientY;
+    currentDeltaY = 0;
+    isDraggingPanel = true;
+  } else {
+    isDraggingPanel = false;
+  }
+}, { passive: true });
+
+infoPanel.addEventListener('touchmove', (e) => {
+  if (!isDraggingPanel) return;
+
+  // 途中で中身が下方向にスクロールされた場合は引き下げ判定を解除
+  if (infoPanel.scrollTop > 0) {
+    isDraggingPanel = false;
+    infoPanel.style.transform = '';
+    infoPanel.style.transition = '';
+    return;
+  }
+
+  const touchY = e.touches[0].clientY;
+  const deltaY = touchY - touchStartY;
+
+  // 下方向（deltaY > 0）に引っ張っているときだけ指に追従してパネルを移動
+  if (deltaY > 0) {
+    // ブラウザのオーバースクロール（引っ張り更新など）を防止
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    currentDeltaY = deltaY;
+    infoPanel.style.transition = 'none'; // 指の動きに遅延なく追従させる
+    infoPanel.style.transform = `translateY(${deltaY}px)`;
+  }
+}, { passive: false });
+
+infoPanel.addEventListener('touchend', () => {
+  if (!isDraggingPanel) return;
+  isDraggingPanel = false;
+
+  // アニメーションを元に戻す
+  infoPanel.style.transition = '';
+
+  // 80px以上下にスワイプされていたらパネルを閉じる
+  if (currentDeltaY > 80) {
+    closeInfoPanel();
+  } else {
+    // 80px未満なら元の開いた位置にスッと戻る
+    infoPanel.style.transform = '';
+  }
+  currentDeltaY = 0;
+}, { passive: true });
