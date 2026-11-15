@@ -2,7 +2,6 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- スマホでのページ全体の勝手な拡大縮小を防止 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>世界の熱帯魚 生息地3Dマップ</title>
   <!-- CesiumJS CDN -->
@@ -17,7 +16,7 @@
       overflow: hidden;
       background-color: #000;
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      touch-action: none; /* スマホでのブラウザ標準スクロール・バウンス防止 */
+      touch-action: none;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -67,6 +66,10 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
       transition: all 0.2s;
     }
+    #reset-btn:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #38bdf8;
+    }
     #reset-btn:active {
       transform: scale(0.96);
     }
@@ -77,7 +80,7 @@
       top: 20px;
       right: 20px;
       width: 350px;
-      max-height: calc(100vh - 40px);
+      max-height: calc(100dvh - 40px);
       background: rgba(15, 23, 42, 0.92);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
@@ -86,20 +89,25 @@
       padding: 20px;
       box-sizing: border-box;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch; /* iOSでの滑らかな慣性スクロール */
-      touch-action: pan-y; /* パネル内の縦スクロールを許可 */
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
       z-index: 20;
       color: #e2e8f0;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
       transform: translateX(420px);
-      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.35s;
     }
 
     #info-panel.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
       transform: translateX(0);
     }
 
-    /* スマホ用のドラッグハンドル（PCでは非表示） */
     .sheet-handle {
       display: none;
     }
@@ -209,16 +217,19 @@
         right: 0;
         left: 0;
         width: 100%;
-        max-height: 55vh; /* 画面上半分で地図とピンが見える高さを確保 */
+        max-height: 55dvh;
         border-radius: 20px 20px 0 0;
         border-left: none;
         border-right: none;
         border-bottom: none;
         padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
-        transform: translateY(105%);
+        transform: translateY(100%);
       }
 
       #info-panel.active {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
         transform: translateY(0);
       }
 
