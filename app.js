@@ -38,7 +38,7 @@ controller.inertiaSpin = 0.9;
 controller.minimumZoomDistance = 5000;
 controller.maximumZoomDistance = 30000000;
 
-// スマホ時はCesium標準の遅いピンチズームと傾きを無効化
+// スマホ時は標準のピンチズームと傾きを無効化
 if (isMobileView()) {
   controller.enableZoom = false;
   controller.enableTilt = false;
@@ -142,7 +142,7 @@ viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(-45.0, -5.0, getOverviewAltitude())
 });
 
-// 5. ピンクリック・タップ・高速ピンチズーム・パネル制御
+// 5. ピンクリック・タップ・超高速ピンチズーム・パネル制御
 const infoPanel = document.getElementById('info-panel');
 const closeBtn = document.getElementById('close-btn');
 const resetBtn = document.getElementById('reset-btn');
@@ -164,40 +164,49 @@ handler.setInputAction(function (click) {
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// Cesium純正のPINCHイベントを使った高速拡大・縮小処理
+// ピンチ操作開始時に地球儀の回転を停止
 handler.setInputAction(function () {
   if (isMobileView()) {
-    // 2本指ピンチ中は地球儀の回転を一時停止してズームに専念させる
     controller.enableRotate = false;
   }
 }, Cesium.ScreenSpaceEventType.PINCH_START);
 
+// ピンチ中の高度ダイレクト変更（衝突判定によるブレーキを完全回避）
 handler.setInputAction(function (movement) {
   if (!isMobileView()) return;
 
-  // movement.distance.endPosition.y と startPosition.y の差分が指の開閉量（ピクセル）
-  const delta = movement.distance.endPosition.y - movement.distance.startPosition.y;
-  const cameraHeight = viewer.camera.positionCartographic.height;
+  // 2本指の距離変化（pixel）を取得
+  const startDist = Cesium.Cartesian2.magnitude(movement.distance.startPosition);
+  const endDist = Cesium.Cartesian2.magnitude(movement.distance.endPosition);
+  const delta = endDist - startDist;
 
-  // 指の移動量に比例して一気に高度を変更（係数 0.025 で高速ズーム）
-  const zoomAmount = delta * cameraHeight * 0.025;
+  if (Math.abs(delta) < 0.5) return;
 
-  if (zoomAmount > 0) {
-    const maxZoomIn = cameraHeight - 5000;
-    if (maxZoomIn > 0) {
-      viewer.camera.zoomIn(Math.min(zoomAmount, maxZoomIn));
+  const cartographic = viewer.camera.positionCartographic;
+  const currentHeight = cartographic.height;
+
+  // 指を1px広げるごとに現在の高度の1.5%ずつ一気に縮める（閉じる時は広げる）
+  const scaleFactor = 1.0 - (delta * 0.015);
+  // 1フレームあたりの急激すぎる変化を抑えつつ最小5km〜最大30,000kmの範囲に収める
+  const clampedScale = Math.max(0.7, Math.min(1.3, scaleFactor));
+  const newHeight = Math.max(5000, Math.min(30000000, currentHeight * clampedScale));
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromRadians(
+      cartographic.longitude,
+      cartographic.latitude,
+      newHeight
+    ),
+    orientation: {
+      heading: viewer.camera.heading,
+      pitch: viewer.camera.pitch,
+      roll: viewer.camera.roll
     }
-  } else if (zoomAmount < 0) {
-    const maxZoomOut = 30000000 - cameraHeight;
-    if (maxZoomOut > 0) {
-      viewer.camera.zoomOut(Math.min(Math.abs(zoomAmount), maxZoomOut));
-    }
-  }
+  });
 }, Cesium.ScreenSpaceEventType.PINCH_MOVE);
 
 handler.setInputAction(function () {
   if (isMobileView()) {
-    // ピンチ終了後に1本指での地球儀回転を再開
     controller.enableRotate = true;
   }
 }, Cesium.ScreenSpaceEventType.PINCH_END);
